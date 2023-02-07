@@ -1,5 +1,6 @@
 package com.example.c137
 
+import android.util.Log
 import libv2ray.V2RayVPNServiceSupportsSet
 
 object Callback {
@@ -22,8 +23,9 @@ object Callback {
         }
 
         override fun protect(l: Long): Boolean {
-//            val serviceControl = serviceControl?.get() ?: return true
-//            return serviceControl.vpnProtect(l.toInt())
+            val serviceControl = V2RayServiceManager.serviceControl?.get() ?:return false
+            Log.d("com.example.v2ray","protect" +l.toString())
+            return serviceControl.vpnProtect(l.toInt())
             return true
         }
 
@@ -33,18 +35,17 @@ object Callback {
         }
 
         override fun setup(s: String): Long {
-//            val serviceControl = serviceControl?.get() ?: return -1
-//            //Logger.d(s)
-//            return try {
-//                serviceControl.startService()
+            val serviceControl = V2RayServiceManager.serviceControl?.get() ?:return-1
+            Log.d("com.example.v2ray", s)
+            return try {
+                serviceControl.startService()
 //                lastQueryTime = System.currentTimeMillis()
 //                startSpeedNotification()
-//                0
-//            } catch (e: Exception) {
-//                Log.d(ANG_PACKAGE, e.toString())
-//                -1
-//            }
-            return 0
+                0
+            } catch (e: Exception) {
+                Log.d("com.example.v2ray", e.toString())
+                -1
+            }
         }
     }
 }

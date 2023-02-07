@@ -3,24 +3,17 @@ package com.example.c137
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.net.VpnService
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.StrictMode
 import android.text.TextUtils
 import com.google.gson.*
 import android.util.Log
 import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
-import androidx.annotation.RequiresApi
+import androidx.activity.result.contract.ActivityResultContracts
 import go.Seq
 import libv2ray.Libv2ray
-import libv2ray.V2RayPoint
-import libv2ray.V2RayVPNServiceSupportsSet
-import java.lang.ref.SoftReference
-import java.net.URL
-import java.net.HttpURLConnection
 
 interface ServiceControl {
     fun getService(): Service
@@ -38,7 +31,11 @@ class MainActivity : AppCompatActivity() {
 //            Libv2ray.initV2Env(Utils.userAssetPath(value?.get()?.getService()))
 //        }
 
-
+    private val requestVpnPermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (it.resultCode == RESULT_OK) {
+//            startV2Ray()
+        }
+    }
     fun getV2rayCong(): String {
         val assets = this.assets.open("nf.json").bufferedReader().use {
             it.readText()
@@ -67,12 +64,15 @@ class MainActivity : AppCompatActivity() {
 
 
         setContentView(R.layout.activity_main)
-
-            Seq.setContext(this)
-            Libv2ray.initV2Env(userAssetPath(this))
+        Seq.setContext(this)
+        Libv2ray.initV2Env(userAssetPath(this))
 
         findViewById<Button>(R.id.button).setOnClickListener{
-            val intent = Intent(applicationContext,V2rayService::class.java)
+            val permIntent = VpnService.prepare(this)
+            if (permIntent != null) {
+                requestVpnPermission.launch(permIntent)
+            }
+            val intent = Intent(applicationContext,V2RayVpnService::class.java)
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N_MR1) {
                 this.startForegroundService(intent)
             } else {

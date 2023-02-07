@@ -47,16 +47,20 @@
                 android:value="" />
         </activity>
 
-        <service android:name=".V2rayService" ></service>
 
         <service
-            android:name=".VPN"
+            android:name=".V2RayVpnService"
+            android:enabled="true"
             android:exported="true"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:label="C137"
+            android:permission="android.permission.BIND_VPN_SERVICE"
             android:process=":RunSoLibV2RayDaemon" >
             <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE" />
+                <action android:name="android.net.VpnService" />
             </intent-filter>
+            <meta-data
+                android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON"
+                android:value="true" />
         </service>
     </application>
 
