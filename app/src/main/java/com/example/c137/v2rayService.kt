@@ -2,8 +2,10 @@ package com.example.c137
 
 import java.lang.ref.SoftReference
 import android.app.*
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.os.Build
 import android.os.IBinder
@@ -29,7 +31,7 @@ object V2RayServiceManager {
     private const val NOTIFICATION_PENDING_INTENT_STOP_V2RAY = 1
     private const val NOTIFICATION_ICON_THRESHOLD = 3000
     var serviceControl: SoftReference<ServiceControl>? = null
-
+    private val mMsgReceive = ReceiveMessageHandler()
     val v2rayPoint: V2RayPoint = Libv2ray.newV2RayPoint(
         Callback.V2RayCallback(),
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1
@@ -55,6 +57,16 @@ object V2RayServiceManager {
     fun startV2rayPoint() {
         val service = serviceControl?.get()?.getService() ?: return
         if (!v2rayPoint.isRunning) {
+            try {
+                val mFilter = IntentFilter(AppConfig.BROADCAST_ACTION_SERVICE)
+                mFilter.addAction(Intent.ACTION_SCREEN_ON)
+                mFilter.addAction(Intent.ACTION_SCREEN_OFF)
+                mFilter.addAction(Intent.ACTION_USER_PRESENT)
+                service.registerReceiver(mMsgReceive, mFilter)
+            } catch (e: Exception) {
+                Log.d("com.v2ray.example", e.toString())
+            }
+
             v2rayPoint.configureFileContent = getV2rayCong()
             v2rayPoint.domainName = "my.hellodear.online:443"
 //                v2rayPoint.domainName="hey.hellodear.online:443"
@@ -85,15 +97,12 @@ object V2RayServiceManager {
             }
         }
         cancelNotification()
+        try {
+            service.unregisterReceiver(mMsgReceive)
+        } catch (e: Exception) {
+            Log.d("com.example.c137", e.toString())
+        }
     }
-//    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-//        startV2ray()
-//        return START_NOT_STICKY
-//    }
-
-//    override fun onBind(intent: Intent): IBinder? {
-//        return null
-//    }
 
     fun cancelNotification() {
         val service = serviceControl?.get()?.getService() ?: return
@@ -138,19 +147,20 @@ object V2RayServiceManager {
             }
 
         mBuilder = NotificationCompat.Builder(service, channelId)
-//            .setSmallIcon(R.drawable.ic_stat_name)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("hey!")
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentPendingIntent)
-//            .addAction(R.drawable.ic_close_grey_800_24dp,
-//                service.getString(R.string.notification_action_stop_v2ray),
-//                stopV2RayPendingIntent)
+            .addAction(
+                com.google.android.material.R.drawable.ic_m3_chip_close,
+                "stop",
+                stopV2RayPendingIntent)
 //        .build()
 
-        //mBuilder?.setDefaults(NotificationCompat.FLAG_ONLY_ALERT_ONCE)  //取消震动,铃声其他都不好使
+        mBuilder?.setDefaults(NotificationCompat.FLAG_ONLY_ALERT_ONCE)
         service.startForeground(NOTIFICATION_ID, mBuilder?.build())
     }
 
@@ -176,5 +186,32 @@ object V2RayServiceManager {
                 service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         }
         return mNotificationManager
+    }
+    private class ReceiveMessageHandler : BroadcastReceiver() {
+        override fun onReceive(ctx: Context?, intent: Intent?) {
+            val serviceControl = serviceControl?.get() ?: return
+            when (intent?.getIntExtra("key", 0)) {
+                AppConfig.MSG_REGISTER_CLIENT -> {
+                    //Logger.e("ReceiveMessageHandler", intent?.getIntExtra("key", 0).toString())
+//                    if (v2rayPoint.isRunning) {
+//                        MessageUtil.sendMsg2UI(serviceControl.getService(), AppConfig.MSG_STATE_RUNNING, "")
+//                    } else {
+//                        MessageUtil.sendMsg2UI(serviceControl.getService(), AppConfig.MSG_STATE_NOT_RUNNING, "")
+//                    }
+                }
+                AppConfig.MSG_UNREGISTER_CLIENT -> {
+                    // nothing to do
+                }
+                AppConfig.MSG_STATE_START -> {
+                    // nothing to do
+                }
+                AppConfig.MSG_STATE_STOP -> {
+                    serviceControl.stopService()
+                }
+                AppConfig.MSG_STATE_RESTART -> {
+                    startV2rayPoint()
+                }
+            }
+        }
     }
 }
